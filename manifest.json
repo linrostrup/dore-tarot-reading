@@ -1,0 +1,18 @@
+{
+  "short_name": "星幣皇后占卜",
+  "name": "星幣皇后 YES|NO 塔羅",
+  "description": "Yes or No 快速占卜",
+  "icons": [
+  {
+    "src": "icon.png",
+    "sizes": "512x512",
+    "type": "image/png",
+    "purpose": "any maskable" 
+  }
+] ,
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#050507",
+  "background_color": "#050507"
+}
