@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>星幣皇后 YES|NO 塔羅占卜</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+    --bg-color: #050507; 
+    --neon-glow: #e0e6ed;
+    /* This makes the card 80% of the screen width, but never larger than 300px */
+    --card-width: min(80vw, 300px); 
+    /* This maintains the 7:12 tarot aspect ratio automatically */
+    --card-height: calc(var(--card-width) * 1.71); 
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Noto Serif SC', serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding-bottom: 100px;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            transition: opacity 0.5s ease;
+            color: #ef4963;
+            /* text-shadow: 0 0 10px var(--neon-glow);*/
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+       a {
+            font-size: 1rem;
+            color: rgba(224, 230, 237, 0.7);
+       }
+
+       #introText {
+            font-size: 1rem;
+            color: rgba(224, 230, 237, 0.7); /* Matching your --neon-glow color but muted */
+            max-width: 500px;
+            line-height: 1.8;
+            text-align: center;
+            margin: 0 auto 40px auto; 
+            padding: 0 25px;
+            font-weight: 300;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        /* --- DECK GRID STYLE (THE FAN) --- */
+        .deck-grid {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end; 
+            width: 100vw;
+            height: 350px; 
+            margin: 20px 0;
+            position: relative;
+            perspective: 1000px;
+        }
+
+        .deck-grid.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.9);
+        }
+
+        .selectable-card {
+            position: absolute;
+            width: 110px; 
+            aspect-ratio: 7 / 12;
+            background-image: url('images/card-back.webp');
+            background-size: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease-out;
+            transform-origin: bottom center;
+            bottom: 50px;
+        }
+
+        /* Fan Positions */
+        .selectable-card:nth-child(1) { transform: translateX(-180px) rotate(-25deg); z-index: 1; }
+        .selectable-card:nth-child(2) { transform: translateX(-110px) rotate(-15deg); z-index: 2; }
+        .selectable-card:nth-child(3) { transform: translateX(-40px) rotate(-5deg); z-index: 3; }
+        .selectable-card:nth-child(4) { transform: translateX(40px) rotate(5deg); z-index: 4; }
+        .selectable-card:nth-child(5) { transform: translateX(110px) rotate(15deg); z-index: 5; }
+        .selectable-card:nth-child(6) { transform: translateX(180px) rotate(25deg); z-index: 6; }
+
+        .selectable-card:hover {
+            z-index: 100 !important;
+            transform: translate(var(--current-x), -80px) scale(1.2) rotate(0deg) !important;
+            box-shadow: 0 10px 40px var(--moon-shadow);
+            border-color: #ffffff;
+            filter: brightness(1.1);
+        }
+
+        /* --- FOCUS CARD STYLE --- */
+        .container {
+            perspective: 1200px;
+            display: none;
+            margin-top: 20px;
+        }
+
+        .card {
+            width: var(--card-width);
+            height: var(--card-height);
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        .card-front {
+            background-image: url('images/card-back.webp');
+            background-size: cover;
+            background-position: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card-back {
+            background-size: cover;
+            background-position: center;
+            transform: rotateY(180deg);
+            border: 2px solid var(--neon-glow);
+        }
+
+        .meaning-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); 
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 30px;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        .card.show-text .meaning-container {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .outcome-badge {
+            font-size: 2.5rem;
+            color: #ef4a63;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 15px var(--neon-glow);
+        }
+
+        .meaning-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #eee;
+            text-align: justify;
+        }
+
+        button {
+            margin-top: 40px;
+            padding: 12px 40px;
+            background: transparent;
+            border: 1px solid var(--neon-glow);
+            color: var(--neon-glow);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.1rem;
+            display: none;
+            font-family: 'Noto Serif SC', serif;
+        }
+
+        button:hover {
+            background: var(--neon-glow);
+            color: black;
+            box-shadow: 0 0 20px var(--neon-glow);
+        }
+
+.buy-button {
+    display: inline-block;
+    padding: 3px 5px;
+    background: rgba(224, 230, 237, 0.1);
+    border: 1px solid var(--neon-glow);
+    color: var(--neon-glow);
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.buy-button:hover {
+    background: var(--neon-glow);
+    color: #000;
+    box-shadow: 0 0 15px var(--moon-shadow);
+}
+
+@media (max-width: 600px) {
+    :root {
+        --card-width: 260px; /* Slightly smaller card for mobile */
+    }
+
+    /* Tighten the fan horizontal spacing */
+    .selectable-card:nth-child(1) { transform: translateX(-130px) rotate(-25deg); }
+    .selectable-card:nth-child(2) { transform: translateX(-80px) rotate(-15deg); }
+    .selectable-card:nth-child(3) { transform: translateX(-30px) rotate(-5deg); }
+    .selectable-card:nth-child(4) { transform: translateX(30px) rotate(5deg); }
+    .selectable-card:nth-child(5) { transform: translateX(80px) rotate(15deg); }
+    .selectable-card:nth-child(6) { transform: translateX(130px) rotate(25deg); }
+
+    #introText {
+        font-size: 0.9rem;
+        padding: 0 20px;
+        line-height: 1.6;
+    }
+
+    .outcome-badge {
+        font-size: 2rem;
+    }
+}
+
+    </style>
+</head>
+<body>
+
+    <h1 id="title">YES | NO 塔羅占卜 by 星幣皇后</h1>
+    <p id="introText">
+    請在心中默想你牽掛的問題，形式須為「是非題」。如：這件事可不可能...？我是否要...？等等。定下心來之後請憑直覺選取一張卡牌（恕健康方面的問題不在涵蓋範圍，請諮詢專業醫護）。</br></br>
+    卡牌取自星幣皇后於 2023 年發行的 「The Not so Classic Doré Tarot」中的 22 張大牌，全副共83張。</br></br> <a href="https://buy.stripe.com/6oU7sK4901efaOJ6SD6wE00" target="_blank" class="buy-button">
+        收藏實體卡牌
+    </a>｜YouTube「星幣皇后x務實塔羅」</p>
+   
+    <div id="deckGrid" class="deck-grid"></div>
+
+    <div class="container" id="focusContainer">
+        <div class="card" id="tarotCard">
+            <div class="card-face card-front"></div>
+            <div class="card-face card-back" id="cardArt">
+                <div class="meaning-container">
+                    <div id="outcomeText" class="outcome-badge">?</div>
+                    <div id="meaningText" class="meaning-text">...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="actionButton" onclick="handleFlow()">解牌</button>
+
+    <script>
+       let tarotData = [];
+    let state = "IDLE"; 
+    const positions = [-180, -110, -40, 40, 110, 180];
+
+    // 1. Load Data
+    fetch('tarot-data.json')
+        .then(res => res.json())
+        .then(data => {
+            tarotData = data;
+            createDeck();
+        });
+
+    function createDeck() {
+        const grid = document.getElementById('deckGrid');
+        for (let i = 0; i < 6; i++) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'selectable-card';
+            cardDiv.style.setProperty('--current-x', `${positions[i]}px`);
+            cardDiv.onclick = () => selectCard(i);
+            grid.appendChild(cardDiv);
+        }
+    }
+
+    function selectCard(index) {
+    const grid = document.getElementById('deckGrid');
+    const title = document.getElementById('title');
+    const intro = document.getElementById('introText');
+    const focusContainer = document.getElementById('focusContainer');
+    const tarotCard = document.getElementById('tarotCard');
+    const cardArt = document.getElementById('cardArt');
+    
+    // 1. Start the fade-out of the fan
+    grid.classList.add('hidden');
+    title.style.opacity = '0';
+    if (intro) intro.style.opacity = '0';
+
+    setTimeout(() => {
+        grid.style.display = 'none';
+        title.style.display = 'none';
+        if (intro) intro.style.display = 'none';
+        
+        // 2. Pick the Data
+        const randomIndex = Math.floor(Math.random() * tarotData.length);
+        const selectedCard = tarotData[randomIndex];
+
+        // 3. THE PRELOADER: Create an invisible image "scout"
+        const imgPreloader = new Image();
+        imgPreloader.src = `images/${selectedCard.file}`;
+
+        // 4. ONLY flip once the "scout" confirms the image is loaded
+        imgPreloader.onload = function() {
+            // Now that we know it's loaded, set the background
+            cardArt.style.backgroundImage = `url('${imgPreloader.src}')`;
+            document.getElementById('outcomeText').innerText = selectedCard.outcome;
+            document.getElementById('meaningText').innerText = selectedCard.meaning_cn;
+
+            // Show the container
+            focusContainer.style.display = 'block';
+            
+            // Trigger the 3D flip now that the "paint" is ready
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    tarotCard.classList.add('is-flipped');
+                    document.getElementById('actionButton').style.display = 'block';
+                    state = "REVEALED";
+                });
+            });
+        };
+
+        // Optional: Handle error if image is missing
+        imgPreloader.onerror = function() {
+            console.error("Failed to load image:", selectedCard.file);
+            alert("图片加载失败，请检查文件名是否正确。");
+        };
+
+    }, 600);
+    }    
+        function handleFlow() {
+        const card = document.getElementById('tarotCard');
+        const btn = document.getElementById('actionButton');
+
+        if (state === "REVEALED") {
+            card.classList.add('show-text');
+            btn.innerText = "重新抽牌";
+            state = "READ";
+        } else if (state === "READ") {
+            location.reload(); 
+        }
+    }    </script>
+
+</body>
+</html>
