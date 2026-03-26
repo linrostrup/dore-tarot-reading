@@ -259,7 +259,7 @@
     }
 
     #actionButton {
-        display: none !important; /* Forces it to stay hidden on load */
+        display: none; /* Forces it to stay hidden on load */
         margin: 30px auto 0 auto;
         padding: 12px 40px;
     }
@@ -354,12 +354,16 @@
             
             // Trigger the 3D flip now that the "paint" is ready
             requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    tarotCard.classList.add('is-flipped');
-                    document.getElementById('actionButton').style.display = 'block';
-                    state = "REVEALED";
-                });
-            });
+    requestAnimationFrame(() => {
+        tarotCard.classList.add('is-flipped');
+        
+        // This is the ONLY place the button is allowed to turn on
+        const btn = document.getElementById('actionButton');
+        btn.style.display = 'block'; 
+        
+        state = "REVEALED";
+    });
+});
         };
 
         // Optional: Handle error if image is missing
